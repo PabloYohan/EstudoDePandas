@@ -1,17 +1,19 @@
 import requests
 import pandas as pd
 
-def getDfFromAPI(latitude: float, longitude: float, url: str) -> pd.DataFrame: 
+ARCHIVE_URL = "https://archive-api.open-meteo.com/v1/archive"
+
+def obter_historico(latitude: float, longitude: float, start_date: str, end_date: str) -> pd.DataFrame: 
     params = {
         "latitude": latitude,
         "longitude": longitude,
-        "start_date": "2025-01-01",
-        "end_date": "2025-03-31",
+        "start_date": start_date,
+        "end_date": end_date,
         "daily": "temperature_2m_max,temperature_2m_min,precipitation_sum",
         "timezone": "America/Sao_Paulo",
     }
 
-    response = requests.get(url, params=params, timeout=10)
+    response = requests.get(ARCHIVE_URL, params=params, timeout=10)
     response.raise_for_status()
 
     payload = response.json()
