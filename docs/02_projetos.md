@@ -1,28 +1,49 @@
-# Projetos progressivos — Pandas + APIs REST
+# Projetos progressivos — Pandas + APIs financeiras
 
-> Acompanhe as entregas marcando as caixas conforme concluir e validar cada item.
+> Os projetos aproveitam a Aula 1 como fundamento técnico, mas usam séries econômicas públicas reais a partir da Aula 2. Marque os requisitos somente após validação. Não há gabaritos.
 
 ## 6. Projetos progressivos e definição de pronto
 
-### Projeto 1 — Comparador de clima (fim da semana 4)
+### Projeto 1 — Monitor de inflação e juros (fim da semana 4)
 
-- [ ] Coleta real de 3 cidades em período configurável;
-- [ ] dataset único com cidade e data;
-- [ ] eliminação de duplicatas justificadas;
-- [ ] tipos e nulos auditados;
-- [ ] exportação CSV e relatório com explicação.
+**Fontes:** API SGS do Banco Central; códigos 433 (IPCA mensal, % no mês) e 432 (Selic meta, série diária, % ao ano).
 
-### Projeto 2 — Relatório analítico automático (fim da semana 6)
+- [ ] Criar coletor parametrizado por série e período, com `timeout`, validação HTTP e falhas legíveis.
+- [ ] Coletar pelo menos 24 meses completos de IPCA e o mesmo intervalo de Selic meta.
+- [ ] Identificar `codigo_sgs`, `data`, `valor`, `frequencia` e `unidade` em tabelas padronizadas.
+- [ ] Converter datas e valores, sem misturar IPCA mensal com observações diárias da Selic.
+- [ ] Detectar nulos, duplicatas por `(codigo_sgs, data)` e períodos não cobertos.
+- [ ] Diferenciar a ausência de registro de um valor igual a zero; justificar vazios de calendário.
+- [ ] Produzir resumo temporal por indicador, evitando somar percentuais diretamente.
+- [ ] Exportar CSV limpo + relatório Markdown com metodologia e qualidade.
 
-- [ ] Médias, medianas, extremos, totais e agregações por mês;
-- [ ] tabelas dinâmicas e gráficos;
-- [ ] integração com metadados;
-- [ ] Excel final com abas e cabeçalhos legíveis.
+**Definição de pronto:** reproduzível por período, sem duplicatas e com frequência/unidade explícitas.
 
-### Projeto 3 — Pipeline de produção (fim da semana 8)
+### Projeto 2 — Relatório financeiro automatizado (fim da semana 6)
 
-- [ ] Requisições com validação e falhas explícitas;
-- [ ] carga incremental e idempotente em PostgreSQL;
-- [ ] funções separadas por responsabilidade;
-- [ ] testes automatizados sem necessidade de internet;
-- [ ] métricas, gráficos, relatório e instruções de execução.
+**Fontes:** SGS 433, SGS 432 e PTAX (USD/BRL, OData).
+
+- [ ] Coletar séries em JSON de formatos diferentes e conservar dados brutos e metadados.
+- [ ] Analisar IPCA mensal e acumulado por composição de taxas, explicando a fórmula.
+- [ ] Produzir evolução da Selic meta sem somar taxas anuais observadas diariamente.
+- [ ] Integrar cotação PTAX com indicadores por convenção temporal documentada (mês e observação escolhida).
+- [ ] Validar cardinalidade de joins e identificar períodos sem cotação (feriados/fins de semana).
+- [ ] Criar gráficos e tabelas dinâmicas com escala, unidade e fonte.
+- [ ] Exportar Excel com abas `base_ipca`, `base_selic`, `base_ptax`, `indicadores` e `qualidade`.
+
+**Definição de pronto:** Excel e relatório coerentes, rastreáveis e reproduzíveis, sem misturar frequências.
+
+### Projeto 3 — Pipeline de dados econômicos em produção (fim da semana 8)
+
+**Fontes:** SGS + PTAX. CVM apenas como extensão opcional, via CSV/ZIP.
+
+- [ ] Modularizar extração, transformação, validação, carga e geração de relatórios.
+- [ ] Implementar timeout, tratamento HTTP, retries limitados e logs sem ocultar falhas.
+- [ ] Carga incremental e idempotente em PostgreSQL com chaves adequadas por fonte.
+- [ ] Registrar data de coleta, competência, fonte, frequência, unidade e critérios de seleção PTAX.
+- [ ] Criar testes `pytest` com mocks, sem depender de acesso à internet.
+- [ ] Validar tipos, duplicatas, períodos, cálculos compostos e join sem multiplicações.
+- [ ] Gerar CSV/Excel, gráficos e relatório Markdown a partir do banco.
+- [ ] Entregar README com setup, CLI, fontes, ressalvas e passo a passo para reproduzir.
+
+**Definição de pronto:** executar duas vezes sem duplicar registros, passar testes e produzir saídas consistentes.

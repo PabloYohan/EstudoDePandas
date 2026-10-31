@@ -73,17 +73,36 @@ pandas-apis/
 
 ## 2. API principal e proposta de projeto
 
-### API principal: Open-Meteo
+### Principal — Banco Central do Brasil, SGS (API REST JSON)
 
-Usaremos duas rotas da [Open-Meteo](https://open-meteo.com/):
+- **SGS 433 — IPCA:** variação **mensal** em %, própria para diagnóstico e análise inicial.
+- **SGS 432 — Meta Selic definida pelo Copom:** série **diária** de taxa expressa em **% ao ano**; não somar os valores diários.
+- **SGS 11 — Selic efetiva:** série diária divulgada em **% ao dia**; opcional, para comparações posteriores. Não confundir com a SGS 432.
 
-1. [Geocoding API](https://open-meteo.com/en/docs/geocoding-api): obtém latitude e longitude de uma cidade a partir do nome.
+**URL base:** `https://api.bcb.gov.br/dados/serie/bcdata.sgs.{codigo}/dados`
 
-2. [Historical Weather API](https://open-meteo.com/en/docs/historical-weather-api): obtém séries históricas por coordenada e período.
+**Parâmetros:** `formato=json`, `dataInicial=dd/MM/yyyy` e `dataFinal=dd/MM/yyyy`. Exemplo (IPCA):
+```text
+https://api.bcb.gov.br/dados/serie/bcdata.sgs.433/dados?formato=json&dataInicial=01/01/2023&dataFinal=31/12/2025
+```
 
-O serviço permite experimentos não comerciais sem chave de API, observados seus termos e limites. Os dados históricos são modelados/reanalisados e podem sofrer revisões; portanto não são sinônimo de medições diretas de estação.
+**Formato esperado:** lista JSON com campos `data` e `valor`. Confirme os tipos retornados (datas e valores podem vir como texto). Para séries diárias, respeite o limite de até 10 anos por consulta e os filtros obrigatórios publicados pelo BCB. Séries têm frequências diferentes; validar dados por frequência, e não assumir observação em todo dia do calendário.
 
-**Projeto contínuo:** construir um analisador de clima histórico capaz de coletar dados de múltiplas cidades, checar a qualidade, comparar padrões, gerar séries temporais e publicar relatórios. Em módulos posteriores serão incorporadas fontes públicas com estruturas diferentes para ampliar a prática de integração.
+### Complementar — Banco Central, PTAX (Olinda/OData)
+
+- Cotações de compra e venda de moedas, incluindo USD/BRL, por data ou intervalo.
+- Fonte usada nas aulas de integração (16–18) e projetos 2 e 3.
+- **Formato:** resposta OData com coleção `value`; parâmetros e boletins devem ser verificados na documentação.
+- **Documentação:** [https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/documentacao](https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/documentacao)
+
+### Complementar opcional — CVM, Dados Abertos
+
+- Informes diários de fundos em arquivos CSV/ZIP, para extensão após o curso; **não** é a API principal nem pré-requisito das 24 aulas.
+- [https://dados.cvm.gov.br/dataset/fi-doc-inf_diario](https://dados.cvm.gov.br/dataset/fi-doc-inf_diario)
+
+**Projeto contínuo:** monitor de indicadores macroeconômicos brasileiros (IPCA, Selic meta e, depois, PTAX), preservando unidades, frequência, fonte e períodos de publicação. O foco é engenharia e análise de dados, não recomendações de investimento.
+
+**Fluxo:** HTTP GET → status/JSON → DataFrame → tipagem/qualidade → análise → integração → Excel/SQL → testes.
 
 ### Modelo da rotina
 
@@ -105,7 +124,7 @@ Entrega: script que obtém dados reais de uma cidade e imprime resumo estrutural
 
 Conteúdo: `info`, `describe`, `columns`, `index`, `sample`, `isna`, tipos, unidades e metadados.
 
-Prática: auditar temperaturas e precipitação de um período.
+Prática: Consultar série SGS 433 (IPCA mensal); auditar estrutura, valores e competência.
 
 Entrega: relatório rápido de integridade da coleta.
 
@@ -125,7 +144,7 @@ Entrega: seleção parametrizada por coluna e período.
 
 Conteúdo: máscaras booleanas, `query`, `between`, `isin`, `&`, `|`, `sort_values`.
 
-Prática: listar dias mais quentes, mais frios e chuvosos.
+Prática: Identificar meses de inflação mais alta/baixa e faixas de variação.
 
 Entrega: funções de filtragem com parâmetros.
 
@@ -133,7 +152,7 @@ Entrega: funções de filtragem com parâmetros.
 
 Conteúdo: atribuição, `assign`, operações entre colunas, condições com `where`, `mask`, `np.select` (opcional).
 
-Prática: amplitude térmica e classificação de dias.
+Prática: Criar faixas de inflação e diferenças em pontos percentuais.
 
 Entrega: conjunto de indicadores derivados sem loops por linha.
 
@@ -141,7 +160,7 @@ Entrega: conjunto de indicadores derivados sem loops por linha.
 
 Conteúdo: `astype`, `to_numeric`, `to_datetime`, tipos anuláveis, coerção segura.
 
-Prática: padronizar datas e medidas de diferentes respostas.
+Prática: Converter datas dd/MM/yyyy e valores de texto da API SGS.
 
 Entrega: função reutilizável de tipagem.
 
@@ -153,7 +172,7 @@ Entrega: função reutilizável de tipagem.
 
 Conteúdo: `isna`, `dropna`, `fillna`, cobertura, validação de faixa e a diferença entre dado ausente e zero.
 
-Prática: auditar períodos incompletos.
+Prática: Diferenciar mês não publicado, nulo e inflação efetivamente zero.
 
 Entrega: relatório de qualidade com percentual de nulos por coluna.
 
@@ -161,7 +180,7 @@ Entrega: relatório de qualidade com percentual de nulos por coluna.
 
 Conteúdo: `duplicated`, `drop_duplicates`, chaves compostas, cardinalidade e unicidade.
 
-Prática: consolidar duas coletas parcialmente sobrepostas.
+Prática: Consolidar extrações sobrepostas; validar chave (serie_sgs, data).
 
 Entrega: dataset com chave `(cidade, data)` validada.
 
@@ -169,7 +188,7 @@ Entrega: dataset com chave `(cidade, data)` validada.
 
 Conteúdo: `.str`, `strip`, `lower`, `replace`, regex, tratamento de nomes e códigos.
 
-Prática: normalizar metadados de cidades e países.
+Prática: Padronizar nomes de indicadores, fontes e códigos SGS.
 
 Entrega: tabela padronizada de localidades.
 
@@ -187,17 +206,17 @@ Entrega: relatório mensal com série temporal consistente.
 
 Conteúdo: funções, composição de requests, respostas heterogêneas, `concat`, logs de erros, rate limiting responsável.
 
-Prática: consultar 3 a 5 cidades e identificar localidades inequivocamente.
+Prática: Consultar SGS 433 (IPCA) e SGS 432 (Selic meta), preservando frequência e unidade.
 
 Entrega: dataset unificado de localidades.
 
-**Aula 12. Mini-projeto 1: comparativo climático**
+**Aula 12. Mini-projeto 1: monitor macroeconômico**
 
-Conteúdo: revisão aplicada de filtros, tipos, validação, concatenação e datas.
+Conteúdo: filtros, tipos, validação, concatenação e datas.  
 
-Prática: construir comparação histórica entre cidades.
+Prática: Publicar painel tabular de inflação e Selic com frequência explícita.  
 
-Entrega: CSV limpo, relatório Markdown e explicação dos critérios de qualidade.
+Entrega: CSV limpo, relatório Markdown e qualidade da base.
 
 ### Semana 5 — Agregações analíticas
 
@@ -205,7 +224,7 @@ Entrega: CSV limpo, relatório Markdown e explicação dos critérios de qualida
 
 Conteúdo: `groupby`, `sum`, `mean`, `median`, `count`, `size`, `nunique`.
 
-Prática: estatísticas por cidade e mês.
+Prática: Indicadores por ano, série e mês — com agregações apropriadas.
 
 Entrega: tabela comparativa.
 
@@ -213,7 +232,7 @@ Entrega: tabela comparativa.
 
 Conteúdo: `agg` nomeado, `transform`, `rank`, acumulados e rolling windows.
 
-Prática: anomalias relativas à média local e médias móveis.
+Prática: Construir inflação acumulada por composição e médias móveis contextualizadas.
 
 Entrega: indicadores calculados vetorialmente.
 
@@ -221,7 +240,7 @@ Entrega: indicadores calculados vetorialmente.
 
 Conteúdo: `pivot_table`, `crosstab`, tabelas por período e gráficos com Pandas/Matplotlib.
 
-Prática: heatmap simples (opcional) ou gráficos de comparações mensais.
+Prática: Gráficos de IPCA e Selic, com escala e unidade indicadas.
 
 Entrega: gráficos reproduzíveis com explicações.
 
@@ -231,7 +250,7 @@ Entrega: gráficos reproduzíveis com explicações.
 
 Conteúdo: `merge`, tipos de join, `validate`, `indicator`, cardinalidade e perdas por chave.
 
-Prática: unir dados meteorológicos com metadados de localidades.
+Prática: Relacionar IPCA, Selic e PTAX por competência definida, sem join ingênuo de datas.
 
 Entrega: merge auditável sem multiplicações de linhas indevidas.
 
@@ -239,7 +258,7 @@ Entrega: merge auditável sem multiplicações de linhas indevidas.
 
 Conteúdo: `concat`, `melt`, `pivot`, `stack`, `explode`, normalização de JSON.
 
-Prática: padronizar saídas de múltiplas APIs.
+Prática: Normalizar retorno SGS (lista de registros) e PTAX (objeto com value).
 
 Entrega: dados em formato tidy (cada observação em uma linha).
 
@@ -247,7 +266,7 @@ Entrega: dados em formato tidy (cada observação em uma linha).
 
 Conteúdo: `read_csv`, `read_excel`, `to_csv`, `to_excel`, Parquet (opcional), codificação, precisão e preservação de tipos.
 
-Prática: construir exportações por cidade e período.
+Prática: Exportar séries, metadados e indicadores para Excel.
 
 Entrega: relatório Excel com abas de base e agregados.
 
@@ -257,7 +276,7 @@ Entrega: relatório Excel com abas de base e agregados.
 
 Conteúdo: SQLAlchemy, conexão, `read_sql`, `to_sql`, tipos SQL, carga incremental e idempotência.
 
-Prática: armazenar dados históricos coletados.
+Prática: Persistir séries com chave (codigo_sgs, data) ou cotação com chave própria.
 
 Entrega: tabela SQL sem duplicatas e consultas verificáveis.
 
@@ -265,7 +284,7 @@ Entrega: tabela SQL sem duplicatas e consultas verificáveis.
 
 Conteúdo: separar extração, transformação e carga; configuração; logs; `try/except`; tentativas com limites e tratamento de falhas HTTP.
 
-Prática: encapsular a coleta em módulos e funções.
+Prática: Pipeline BCB SGS e PTAX com tratamento de erros e limites.
 
 Entrega: `pipeline.py` executável por CLI.
 
@@ -289,17 +308,19 @@ Entrega: benchmark reproduzível e interpretação.
 
 **Aula 23. Engenharia de relatórios**
 
-Conteúdo: métricas finais, organização de gráficos, interpretação, exportação, rastreabilidade de origem e período.
+Conteúdo: indicadores, gráficos, rastreabilidade e exportação.
 
-Prática: gerar automaticamente um relatório analítico.
+Prática: Relatório macroeconômico reproduzível com atualização e cobertura.
 
 Entrega: relatório e datasets finais.
 
 **Aula 24. Projeto final: pipeline de dados completo**
 
-Objetivo: coletar dados de no mínimo 3 cidades e 12 meses, validar esquema e chaves, armazenar histórico, calcular estatísticas, gerar gráficos e exportar relatório.
+Conteúdo: integração, qualidade, banco, testes e publicação.  
 
-Entrega: projeto organizado no Git, documentação de execução, testes, CSV/Excel, consultas SQL e relatório final.
+Prática: Coletar IPCA, Selic meta e PTAX em período definido; respeitar calendários e unidades. 
+ 
+Entrega: Repositório documentado, PostgreSQL, Excel, gráficos e relatório.
 
 ## 4. Método de estudo e avaliação
 
@@ -319,11 +340,14 @@ Rubrica: resultados corretos (40%), uso apropriado de Pandas (25%), clareza e or
 
 ## 7. Material de referência
 
-- Pandas — primeiros passos: https://pandas.pydata.org/docs/getting_started/index.html
-- Pandas — guia do usuário: https://pandas.pydata.org/docs/user_guide/index.html
-- Requests — documentação: https://requests.readthedocs.io/en/latest/
-- Open-Meteo Geocoding: https://open-meteo.com/en/docs/geocoding-api
-- Open-Meteo Historical Weather: https://open-meteo.com/en/docs/historical-weather-api
-- Pytest: https://docs.pytest.org/
+- [Pandas — primeiros passos](https://pandas.pydata.org/docs/getting_started/index.html)
+- [Pandas — User Guide](https://pandas.pydata.org/docs/user_guide/index.html)
+- [Requests](https://requests.readthedocs.io/en/latest/)
+- [BCB — SGS 432 / Meta Selic](https://dadosabertos.bcb.gov.br/dataset/432-taxa-de-juros---meta-selic-definida-pelo-copom)
+- [BCB — SGS 11 / Selic efetiva](https://dadosabertos.bcb.gov.br/dataset/11-taxa-de-juros---selic)
+- [BCB — catálogo de dados abertos](https://dadosabertos.bcb.gov.br/)
+- [BCB — PTAX](https://dadosabertos.bcb.gov.br/dataset/dolar-americano-usd-todos-os-boletins-diarios)
+- [CVM — fundos](https://dados.cvm.gov.br/dataset/fi-doc-inf_diario)
+- [Pytest](https://docs.pytest.org/)
 
-**Próximo passo:** execute a Parte A e a Parte B da Aula 1; depois resolva o Exercício 1 sem consultar gabarito. Envie seu código para revisão antes de avançarmos.
+**Próximo passo:** realizar a Aula 2 com SGS 433. Manter `03_aula_01.md` e `aula01.py` originais intactos.
